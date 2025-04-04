@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <meta http-equiv="ScreenOrientation" content="autoRotate:disabled" />
+  <title>Windows 10 Boot Simulator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      user-select: none;
+    }
+    
+    body {
+      background-color: black;
+      color: white;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: fixed;
+    }
+    
+    /* Styles for landscape orientation */
+    @media screen and (orientation: portrait) {
+      .orientation-message {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: black;
+        color: white;
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+      }
+    }
+    
+    @media screen and (orientation: landscape) {
+      .orientation-message {
+        display: none;
+      }
+    }
+    
+    .container {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .content {
+      width: 100%;
+      max-width: 800px;
+      text-align: center;
+      position: relative;
+    }
+    
+    /* Logo animation styles */
+    .windows-logo {
+      width: 150px;
+      height: 150px;
+      margin: 0 auto;
+      position: relative;
+      animation: logo-rotate 3s linear infinite;
+    }
+    
+    .windows-logo-inner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 10px;
+    }
+    
+    .windows-logo-pane {
+      background-color: #0078D7;
+      box-shadow: 0 0 15px rgba(0, 120, 215, 0.5);
+    }
+    
+    @keyframes logo-rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Loading dots animation */
+    .dot-loader {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    
+    .dot {
+      width: 12px;
+      height: 12px;
+      background-color: #0078D7;
+      border-radius: 50%;
+      margin: 0 5px;
+      animation: dot-loader 1.5s infinite;
+      opacity: 0;
+    }
+    
+    .dot:nth-child(1) { animation-delay: 0s; }
+    .dot:nth-child(2) { animation-delay: 0.5s; }
+    .dot:nth-child(3) { animation-delay: 1s; }
+    
+    @keyframes dot-loader {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    
+    /* Login form styles */
+    .login-stage {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      animation: fadeIn 1s ease-in forwards;
+    }
+    
+    .user-icon {
+      width: 128px;
+      height: 128px;
+      background-color: #0078D7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    
+    .login-form {
+      padding: 32px;
+      width: 320px;
+      max-width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .login-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      text-align: center;
+      font-size: 18px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .login-input:focus {
+      background-color: rgba(255, 255, 255, 0.3);
+      border-color: #0078D7;
+      outline: none;
+    }
+    
+    .login-button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      color: white;
+      font-weight: 600;
+      background-color: #0078D7;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+    
+    .login-button:hover {
+      background-color: #0086F0;
+    }
+    
+    .login-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .login-options {
+      margin-top: 24px;
+      display: flex;
+      gap: 24px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .login-options a {
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .login-options a:hover {
+      color: white;
+    }
+    
+    /* Success stage styles */
+    .success-stage {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      animation: fadeIn 1s ease-in forwards;
+    }
+    
+    .success-icon {
+      width: 96px;
+      height: 96px;
+      color: #4ade80;
+      margin-bottom: 24px;
+    }
+    
+    .success-stage h2 {
+      font-size: 30px;
+      font-weight: 300;
+      margin-bottom: 8px;
+    }
+    
+    .success-stage p {
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .startup-message {
+      margin-top: 32px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    /* Desktop stage styles */
+    .desktop-stage {
+      display: none;
+      position: relative;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      animation: fadeIn 1s ease-in forwards;
+    }
+    
+    .desktop-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      z-index: -1;
+    }
+    
+    .desktop-icons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 16px;
+      padding: 16px;
+    }
+    
+    /* Mobile landscape optimization */
+    @media screen and (max-height: 450px) {
+      .windows-logo {
+        width: 100px;
+        height: 100px;
+      }
+      
+      .success-icon {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .desktop-icons {
+        gap: 8px;
+      }
+      
+      .icon-bg svg {
+        width: 32px;
+        height: 32px;
+      }
+      
+      .taskbar {
+        height: 36px;
+      }
+      
+      .login-form {
+        padding: 20px;
+        width: 280px;
+      }
+      
+      .login-input {
+        padding: 8px 12px;
+        margin-bottom: 12px;
+      }
+      
+      .notification {
+        width: 250px;
+        padding: 12px;
+        bottom: 48px;
+      }
+    }
+    
+    .desktop-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 80px;
+      cursor: pointer;
+    }
+    
+    .icon-bg {
+      padding: 8px;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+    
+    .icon-bg:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .icon-label {
+      color: white;
+      font-size: 12px;
+      margin-top: 4px;
+      padding: 2px 4px;
+      background-color: rgba(0, 0, 0, 0.4);
+      border-radius: 4px;
+    }
+    
+    .taskbar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 10;
+    }
+    
+    .start-button {
+      margin-right: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+      cursor: pointer;
+    }
+    
+    .start-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .search-bar {
+      flex: 1;
+      max-width: 400px;
+    }
+    
+    .search-input {
+      width: 100%;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 4px 16px;
+      color: white;
+      font-size: 14px;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .system-tray {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+    }
+    
+    .notification {
+      position: absolute;
+      bottom: 64px;
+      right: 16px;
+      background-color: rgba(30, 30, 30, 0.9);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(100, 100, 100, 0.7);
+      width: 320px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      animation: slide-up 0.5s ease-out forwards;
+    }
+    
+    @keyframes slide-up {
+      0% { 
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      100% { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .notification-header {
+      display: flex;
+      align-items: flex-start;
+    }
+    
+    .notification-icon {
+      margin-right: 16px;
+      color: #0078D7;
+    }
+    
+    .notification-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .notification-message {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+    }
+    
+    /* Modal styles */
+    .app-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 100;
+    }
+    
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-container {
+      position: relative;
+      background-color: #f0f0f0;
+      color: black;
+      width: 80%;
+      height: 80%;
+      margin: 5% auto;
+      border-radius: 6px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .modal-title-bar {
+      background-color: #0078D7;
+      color: white;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+    
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .window-button {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .minimize-button {
+      background-color: #ffbd44;
+    }
+    
+    .maximize-button {
+      background-color: #00ca4e;
+    }
+    
+    .close-button {
+      background-color: #ff605c;
+    }
+    
+    .modal-content {
+      flex: 1;
+      overflow: auto;
+    }
+    
+    /* File Explorer App */
+    .explorer-container {
+      padding: 16px;
+    }
+    
+    .explorer-section {
+      background-color: white;
+      border: 1px solid #ddd;
+      padding: 16px;
+    }
+    
+    .explorer-heading {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    
+    .explorer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    
+    .explorer-item {
+      border: 1px solid #eee;
+      padding: 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .explorer-icon {
+      margin-right: 8px;
+      color: #0078D7;
+    }
+    
+    /* Edge Browser App */
+    .browser-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .browser-toolbar {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .browser-button {
+      padding: 4px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .browser-button:hover {
+      background-color: #eee;
+    }
+    
+    .address-bar {
+      flex: 1;
+      background-color: #f5f5f5;
+      border-radius: 20px;
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .url-prefix {
+      color: #777;
+      margin-right: 8px;
+    }
+    
+    .browser-content {
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .browser-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    /* Control Panel App */
+    .control-panel-container {
+      padding: 16px;
+    }
+    
+    .settings-section {
+      margin-bottom: 24px;
+    }
+    
+    .settings-heading {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    
+    .settings-item {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .settings-icon {
+      margin-right: 12px;
+      color: #555;
+    }
+    
+    /* Documents App */
+    .documents-container {
+      padding: 16px;
+    }
+    
+    .documents-header {
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .documents-title {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .documents-subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .documents-content {
+      background-color: white;
+      padding: 16px;
+      border-radius: 4px;
+    }
+    
+    .empty-documents {
+      text-align: center;
+      padding: 32px 0;
+    }
+    
+    .documents-icon {
+      color: #ccc;
+      font-size: 64px;
+      margin-bottom: 8px;
+    }
+    
+    .empty-message {
+      color: #777;
+    }
+    
+    .create-document-button {
+      margin-top: 16px;
+      padding: 8px 16px;
+      background-color: #0078D7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .create-document-button:hover {
+      background-color: #0086F0;
+    }
+    
+    /* Snake Game App */
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .game-toolbar {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+    }
+    
+    .game-frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    
+    /* Power button */
+    .power-button {
+      position: absolute;
+      bottom: 32px;
+      right: 32px;
+      color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    
+    .power-button:hover {
+      color: white;
+    }
+    
+    /* Clock */
+    .clock {
+      position: absolute;
+      bottom: 32px;
+      left: 32px;
+      font-size: 20px;
+      font-weight: 300;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Rotation message for mobile -->
+  <div class="orientation-message">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+      <path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+      <path d="M12 18h.01" />
+    </svg>
+    <h2 style="margin-top: 20px; font-size: 24px;">يرجى تدوير الهاتف</h2>
+    <p style="margin-top: 10px; font-size: 16px; opacity: 0.7;">هذا الموقع مصمم للعرض بالوضعية الأفقية</p>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <!-- Logo Stage -->
+      <div id="logoStage" class="logo-stage">
+        <div class="windows-logo">
+          <div class="windows-logo-inner">
+            <div class="windows-logo-pane"></div>
+            <div class="windows-logo-pane"></div>
+            <div class="windows-logo-pane"></div>
+            <div class="windows-logo-pane"></div>
+          </div>
+        </div>
+        <div class="dot-loader">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
+      
+      <!-- Login Stage -->
+      <div id="loginStage" class="login-stage">
+        <div class="user-icon">
+          <svg width="64" height="64" viewBox="0 0 20 20" fill="white">
+            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+        
+        <div class="login-form">
+          <form id="loginForm">
+            <input type="text" id="username" class="login-input" placeholder="Username" required />
+            <input type="password" id="password" class="login-input" placeholder="Password" />
+            <button type="submit" id="loginButton" class="login-button">Sign in</button>
+          </form>
+        </div>
+        
+        <div class="login-options">
+          <a href="#">I forgot my password</a>
+          <a href="#">Sign-in options</a>
+        </div>
+      </div>
+      
+      <!-- Success Stage -->
+      <div id="successStage" class="success-stage">
+        <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        
+        <h2>Welcome back</h2>
+        <p>Signed in as <span id="welcomeUsername"></span></p>
+        
+        <div class="startup-message">
+          <p>Windows is starting up...</p>
+        </div>
+      </div>
+      
+      <!-- Desktop Stage -->
+      <div id="desktopStage" class="desktop-stage">
+        <div class="desktop-background"></div>
+        
+        <!-- Desktop Icons -->
+        <div class="desktop-icons">
+          <div class="desktop-icon" data-app="explorer">
+            <div class="icon-bg">
+              <svg width="40" height="40" viewBox="0 0 20 20" fill="#38bdf8">
+                <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <span class="icon-label">File Explorer</span>
+          </div>
+          
+          <div class="desktop-icon" data-app="edge">
+            <div class="icon-bg">
+              <svg width="40" height="40" viewBox="0 0 20 20" fill="#3b82f6">
+                <path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <span class="icon-label">Edge</span>
+          </div>
+          
+          <div class="desktop-icon" data-app="control">
+            <div class="icon-bg">
+              <svg width="40" height="40" viewBox="0 0 20 20" fill="white">
+                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
+              </svg>
+            </div>
+            <span class="icon-label">Control Panel</span>
+          </div>
+          
+          <div class="desktop-icon" data-app="documents">
+            <div class="icon-bg">
+              <svg width="40" height="40" viewBox="0 0 20 20" fill="#facc15">
+                <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <span class="icon-label">Documents</span>
+          </div>
+          
+          <div class="desktop-icon" data-app="snake">
+            <div class="icon-bg">
+              <svg width="40" height="40" viewBox="0 0 20 20" fill="#22c55e">
+                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a1.5 1.5 0 000 3h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1H3a1 1 0 01-1-1v-3a1 1 0 011-1h1a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z" />
+              </svg>
+            </div>
+            <span class="icon-label">Snake Game</span>
+          </div>
+        </div>
+        
+        <!-- Taskbar -->
+        <div class="taskbar">
+          <div class="start-button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+              <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" />
+            </svg>
+          </div>
+          
+          <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Type here to search" />
+          </div>
+          
+          <div class="system-tray">
+            <div id="taskbarTime"></div>
+            <div id="taskbarDate"></div>
+          </div>
+        </div>
+        
+        <!-- Welcome Notification -->
+        <div class="notification">
+          <div class="notification-header">
+            <div class="notification-icon">
+              <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="notification-title">Welcome <span id="desktopUsername"></span></div>
+              <div class="notification-message">Your system is ready to use. Click here to see what's new in Windows 10.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Power Button -->
+      <div id="powerButton" class="power-button">
+        <svg width="40" height="40" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm1-9a1 1 0 10-2 0v4a1 1 0 102 0V7z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+      
+      <!-- Clock -->
+      <div id="clock" class="clock"></div>
+    </div>
+  </div>
+  
+  <!-- App Modals -->
+  <!-- File Explorer Modal -->
+  <div id="explorerModal" class="app-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+      <div class="modal-title-bar">
+        <div class="modal-title">File Explorer</div>
+        <div class="window-controls">
+          <div class="window-button minimize-button"></div>
+          <div class="window-button maximize-button"></div>
+          <div class="window-button close-button" data-close="explorerModal"></div>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="explorer-container">
+          <div class="explorer-section">
+            <div class="explorer-heading">Quick access</div>
+            <div class="explorer-grid">
+              <div class="explorer-item">
+                <div class="explorer-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Documents</span>
+              </div>
+              <div class="explorer-item">
+                <div class="explorer-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Downloads</span>
+              </div>
+              <div class="explorer-item">
+                <div class="explorer-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+                  </svg>
+                </div>
+                <span>Pictures</span>
+              </div>
+              <div class="explorer-item">
+                <div class="explorer-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Videos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Edge Browser Modal -->
+  <div id="edgeModal" class="app-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+      <div class="modal-title-bar">
+        <div class="modal-title">Microsoft Edge</div>
+        <div class="window-controls">
+          <div class="window-button minimize-button"></div>
+          <div class="window-button maximize-button"></div>
+          <div class="window-button close-button" data-close="edgeModal"></div>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="browser-container">
+          <div class="browser-toolbar">
+            <div class="browser-button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </div>
+            <div class="browser-button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+            <div class="browser-button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </div>
+            <div class="address-bar">
+              <span class="url-prefix">https://</span>
+              <span>www.google.com</span>
+            </div>
+          </div>
+          <div class="browser-content">
+            <iframe src="https://www.google.com/webhp?igu=1" class="browser-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Control Panel Modal -->
+  <div id="controlModal" class="app-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+      <div class="modal-title-bar">
+        <div class="modal-title">Control Panel</div>
+        <div class="window-controls">
+          <div class="window-button minimize-button"></div>
+          <div class="window-button maximize-button"></div>
+          <div class="window-button close-button" data-close="controlModal"></div>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="control-panel-container">
+          <div class="settings-section">
+            <div class="settings-heading">System Settings</div>
+            <div class="settings-grid">
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>System and Security</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>User Accounts</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Display</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Power Options</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <div class="settings-heading">Hardware and Sound</div>
+            <div class="settings-grid">
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Sound</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Devices and Printers</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13 7H7v6h6V7z" />
+                    <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Mouse</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span>Keyboard</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Documents Modal -->
+  <div id="documentsModal" class="app-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+      <div class="modal-title-bar">
+        <div class="modal-title">Documents</div>
+        <div class="window-controls">
+          <div class="window-button minimize-button"></div>
+          <div class="window-button maximize-button"></div>
+          <div class="window-button close-button" data-close="documentsModal"></div>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="documents-container">
+          <div class="documents-header">
+            <div class="documents-title">My Documents</div>
+            <div class="documents-subtitle">Documents for <span id="documentsUsername"></span></div>
+          </div>
+          
+          <div class="documents-content">
+            <div class="empty-documents">
+              <div class="documents-icon">
+                <svg width="64" height="64" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <p class="empty-message">No documents found</p>
+              <button class="create-document-button">Create new document</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Snake Game Modal -->
+  <div id="snakeModal" class="app-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+      <div class="modal-title-bar">
+        <div class="modal-title">Snake Game</div>
+        <div class="window-controls">
+          <div class="window-button minimize-button"></div>
+          <div class="window-button maximize-button"></div>
+          <div class="window-button close-button" data-close="snakeModal"></div>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="game-container">
+          <div class="game-toolbar">
+            <div class="address-bar">
+              <span class="url-prefix">https://</span>
+              <span>play-snake-game.com</span>
+            </div>
+          </div>
+          <iframe src="https://playsnake.org/" class="game-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Startup Sound -->
+  <audio id="startupSound" preload="auto">
+    <source src="https://ia601804.us.archive.org/27/items/windows-10-startup-sound/Windows%2010%20Startup%20Sound.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // Prevent text selection and context menu
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    
+    // Elements
+    const logoStage = document.getElementById('logoStage');
+    const loginStage = document.getElementById('loginStage');
+    const successStage = document.getElementById('successStage');
+    const desktopStage = document.getElementById('desktopStage');
+    const powerButton = document.getElementById('powerButton');
+    const clock = document.getElementById('clock');
+    const welcomeUsername = document.getElementById('welcomeUsername');
+    const desktopUsername = document.getElementById('desktopUsername');
+    const documentsUsername = document.getElementById('documentsUsername');
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const loginButton = document.getElementById('loginButton');
+    const startupSound = document.getElementById('startupSound');
+    const taskbarTime = document.getElementById('taskbarTime');
+    const taskbarDate = document.getElementById('taskbarDate');
+    
+    // Current stage tracking
+    let currentStage = 'logo';
+    let currentUsername = '';
+    
+    // Lock screen orientation to landscape if possible
+    function lockToLandscape() {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(e => {
+            console.log('Orientation lock failed:', e);
+          });
+        }
+      } catch (e) {
+        console.log('Orientation API not supported');
+      }
+    }
+    
+    // Initialize app
+    function initApp() {
+      // Try to lock to landscape orientation
+      lockToLandscape();
+      // Show logo stage first
+      showStage('logo');
+      
+      // Update clock
+      updateClock();
+      setInterval(updateClock, 60000);
+      
+      // After 5 seconds, show login stage
+      setTimeout(() => {
+        showStage('login');
+      }, 5000);
+      
+      // Event listeners
+      loginForm.addEventListener('submit', handleLogin);
+      powerButton.addEventListener('click', handlePower);
+      
+      // App open events
+      document.querySelectorAll('.desktop-icon').forEach(icon => {
+        icon.addEventListener('click', () => {
+          const app = icon.getAttribute('data-app');
+          openApp(app);
+        });
+      });
+      
+      // Close modal buttons
+      document.querySelectorAll('[data-close]').forEach(button => {
+        button.addEventListener('click', () => {
+          const modalId = button.getAttribute('data-close');
+          document.getElementById(modalId).style.display = 'none';
+        });
+      });
+      
+      // Modal backdrops close modals
+      document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', event => {
+          event.target.parentElement.style.display = 'none';
+        });
+      });
+    }
+    
+    // Show a stage and hide others
+    function showStage(stage) {
+      // Hide all stages
+      logoStage.style.display = 'none';
+      loginStage.style.display = 'none';
+      successStage.style.display = 'none';
+      desktopStage.style.display = 'none';
+      
+      // Show power button only on certain stages
+      powerButton.style.display = stage === 'desktop' ? 'none' : 'block';
+      clock.style.display = stage === 'desktop' ? 'none' : 'block';
+      
+      // Show selected stage
+      switch (stage) {
+        case 'logo':
+          logoStage.style.display = 'block';
+          break;
+        case 'login':
+          loginStage.style.display = 'flex';
+          break;
+        case 'success':
+          successStage.style.display = 'flex';
+          break;
+        case 'desktop':
+          desktopStage.style.display = 'block';
+          break;
+      }
+      
+      currentStage = stage;
+    }
+    
+    // Handle login form submit
+    function handleLogin(event) {
+      event.preventDefault();
+      const username = usernameInput.value.trim();
+      
+      if (!username) {
+        alert("Please enter a username to continue");
+        return;
+      }
+      
+      // Disable login button
+      loginButton.disabled = true;
+      loginButton.textContent = "Signing in...";
+      
+      // Simulate API call
+      setTimeout(() => {
+        currentUsername = username;
+        
+        // Update usernames in different places
+        welcomeUsername.textContent = username;
+        desktopUsername.textContent = username;
+        documentsUsername.textContent = username;
+        
+        // Show success stage
+        showStage('success');
+        
+        // After 2 seconds, show desktop
+        setTimeout(() => {
+          // Play startup sound
+          startupSound.play().catch(err => {
+            console.error("Error playing audio:", err);
+          });
+          
+          // Show desktop
+          showStage('desktop');
+        }, 2000);
+        
+        // Reset login form
+        loginButton.disabled = false;
+        loginButton.textContent = "Sign in";
+      }, 1000);
+    }
+    
+    // Handle power button click
+    function handlePower() {
+      // Reload the page
+      window.location.reload();
+    }
+    
+    // Update clock
+    function updateClock() {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const timeString = `${hours}:${minutes}`;
+      
+      clock.textContent = timeString;
+      taskbarTime.textContent = timeString;
+      
+      // Update date in taskbar
+      const options = { month: 'numeric', day: 'numeric', year: 'numeric' };
+      taskbarDate.textContent = now.toLocaleDateString(undefined, options);
+    }
+    
+    // Open app modal
+    function openApp(app) {
+      let modalId;
+      
+      switch (app) {
+        case 'explorer':
+          modalId = 'explorerModal';
+          break;
+        case 'edge':
+          modalId = 'edgeModal';
+          break;
+        case 'control':
+          modalId = 'controlModal';
+          break;
+        case 'documents':
+          modalId = 'documentsModal';
+          break;
+        case 'snake':
+          modalId = 'snakeModal';
+          break;
+      }
+      
+      if (modalId) {
+        document.getElementById(modalId).style.display = 'block';
+      }
+    }
+    
+    // Initialize the app
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
